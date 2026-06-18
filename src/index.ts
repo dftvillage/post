@@ -12,7 +12,7 @@ import { initServer } from './server';
 
   // await initInviteUsers();
 
-  // await massInitInviteUsers();
+  await massInitInviteUsers();
 
   // await parseChannelCommentUsers();
 

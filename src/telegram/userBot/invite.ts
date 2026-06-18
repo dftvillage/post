@@ -4,12 +4,12 @@ import { FloodWaitError } from 'telegram/errors';
 import { Api } from 'telegram';
 import bigInt from 'big-integer';
 
-import { userBot } from './index';
+import { userBot2 as userBot } from './index';
 import { environment } from '../../config/env';
 import { getAllParsedUsers, updateParsedUser } from '../../services/parsedUser';
 
-const inviteDelayTime = 10 * 1000;
-const massOffset = 100;
+const inviteDelayTime = () => (Math.random() * 50 + 150) * 1000; // 150 - 200
+const massOffset = 20;
 
 export const initInviteUsers = async () => {
   let inviteCount = 0;
@@ -32,16 +32,18 @@ export const initInviteUsers = async () => {
 
       if (users[index + 1]) {
         if (inviteCountRange >= 10) {
+          const currentШnviteDelayTime = inviteDelayTime();
+
           inviteCountRange = 0;
 
-          console.log(`\nDelay in ${inviteDelayTime / 1000} seconds`);
+          console.log(`\nDelay in ${currentШnviteDelayTime / 1000} seconds`);
 
           await new Promise((res) =>
             setTimeout(() => {
               console.log('Resume inviting\n');
 
               return res(true);
-            }, inviteDelayTime)
+            }, currentШnviteDelayTime)
           );
         }
 
@@ -107,17 +109,19 @@ export const massInitInviteUsers = async () => {
         await updateParsedUser({ telegram_id: user.userId.toString() }, { invite_status: 'invited' });
       }
 
-      const nextUsers = users.slice(0, massOffset);
+      const nextUsers = offsetUsers.slice(massOffset);
 
       if (nextUsers.length) {
-        console.log(`\nDelay in ${inviteDelayTime / 1000} seconds`);
+        const currentШnviteDelayTime = inviteDelayTime();
+
+        console.log(`\nDelay in ${currentШnviteDelayTime / 1000} seconds`);
 
         await new Promise((res) =>
           setTimeout(() => {
             console.log('Resume inviting\n');
 
             return res(true);
-          }, inviteDelayTime)
+          }, currentШnviteDelayTime)
         );
 
         return await massInviteHandler(nextUsers);

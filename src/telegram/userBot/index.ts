@@ -15,11 +15,11 @@ export const userBot = new TelegramClient(stringSession, environment.USERBOT_API
   autoReconnect: true,
 });
 
-// export const userBot2 = new TelegramClient(stringSession2, environment.USERBOT_2_API_ID, environment.USERBOT_2_API_HASH, {
-//   connectionRetries: 5,
-//   timeout: 60000,
-//   autoReconnect: true,
-// });
+export const userBot2 = new TelegramClient(stringSession2, environment.USERBOT_2_API_ID, environment.USERBOT_2_API_HASH, {
+  connectionRetries: 5,
+  timeout: 60000,
+  autoReconnect: true,
+});
 
 export const initUserBot = async () => {
   userBot.setParseMode('html');
@@ -33,20 +33,21 @@ export const initUserBot = async () => {
 
   console.log('You should now be connected.');
 
-  // console.log(userBot.session.save());
+  userBot.session.save();
 
   // ============
 
-  // userBot2.setParseMode('html');
+  userBot2.setParseMode('html');
 
-  // await userBot2.start({
-  //   phoneNumber: async () => new Promise((resolve) => rl.question('Please enter your number: ', resolve)),
-  //   password: async () => new Promise((resolve) => rl.question('Please enter your password: ', resolve)),
-  //   phoneCode: async () => new Promise((resolve) => rl.question('Please enter the code you received: ', resolve)),
-  //   onError: (err) => console.log(err),
-  // });
+  await userBot2.start({
+    phoneNumber: async () => new Promise((resolve) => rl.question('Please enter your number: ', resolve)),
+    password: async () => new Promise((resolve) => rl.question('Please enter your password: ', resolve)),
+    phoneCode: async () => new Promise((resolve) => rl.question('Please enter the code you received: ', resolve)),
+    onError: (err) => console.log(err),
+  });
 
   // console.log('You should now be connected.');
 
   // console.log(userBot2.session.save());
+  userBot2.session.save();
 };
