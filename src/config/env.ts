@@ -12,11 +12,18 @@ export const environment = {
   HOST: process.env.HOST as string,
   PORT: process.env.PORT as string,
 
+  USERBOT_ID: +(process.env.USERBOT_ID as string),
   USERBOT_API_ID: +(process.env.USERBOT_API_ID as string),
   USERBOT_API_HASH: process.env.USERBOT_API_HASH as string,
   USERBOT_API_SESSION: process.env.USERBOT_API_SESSION as string,
 
+  USERBOT_2_ID: +(process.env.USERBOT_2_ID as string),
   USERBOT_2_API_ID: +(process.env.USERBOT_2_API_ID as string),
   USERBOT_2_API_HASH: process.env.USERBOT_2_API_HASH as string,
   USERBOT_2_API_SESSION: process.env.USERBOT_2_API_SESSION as string,
+
+  USERBOT_3_ID: +(process.env.USERBOT_3_ID as string),
+  USERBOT_3_API_ID: +(process.env.USERBOT_3_API_ID as string),
+  USERBOT_3_API_HASH: process.env.USERBOT_3_API_HASH as string,
+  USERBOT_3_API_SESSION: process.env.USERBOT_3_API_SESSION as string,
 };

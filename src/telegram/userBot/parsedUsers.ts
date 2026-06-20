@@ -3,12 +3,13 @@ import { CHANNEL } from '../../enums';
 import { Api } from 'telegram';
 
 import { getParsedUser, getAllParsedUsers } from '../../services/parsedUser';
-import { userBot } from './index';
+import { userBots, mainUserBot } from './index';
 
 let requestUsersDelay: ReturnType<typeof setTimeout> | undefined = undefined;
 let requestRepliesDelay: ReturnType<typeof setTimeout> | undefined = undefined;
 const requestRepliesDelayTime: number = 2 * 1000;
 const allParsedUserIds = new Set<string>();
+let currentUserBotIndex = 0;
 
 const channels = Object.values(CHANNEL.SLUG_FOR_USERS);
 
@@ -20,9 +21,18 @@ const fetchChannelUsersPost = async (messageIds: number[], channelName: string |
   const postId = messageIds[index];
   const channelHumanName = CHANNEL.NAME[channelName];
 
-  console.log(`\nFetch replies for channel "${channelHumanName}" from post ${postId}`);
+  const userBot = userBots[currentUserBotIndex];
+  const botId = userBot.id.toString();
 
-  const replies = await userBot.invoke(
+  console.log(`\nFetch replies for channel "${channelHumanName}", from post ${postId}. Bot id: ${userBot.id} ---- ${currentUserBotIndex}`);
+
+  if (currentUserBotIndex === userBots.length - 1) {
+    currentUserBotIndex = 0;
+  } else {
+    currentUserBotIndex++;
+  }
+
+  const replies = await userBot.value.invoke(
     new Api.messages.GetReplies({
       peer: channelName,
       msgId: postId,
@@ -80,6 +90,7 @@ const fetchChannelUsersPost = async (messageIds: number[], channelName: string |
             premium: !!user.premium,
             support: !!user.support,
             telegram_id: userId,
+            bot_id: botId,
             verified: !!user.verified,
             langCode: user.langCode,
             accessHash: user.accessHash?.toString()!,
@@ -108,7 +119,7 @@ const fetchUsersChannel = async (index: number = 0) => {
   const channelName = channels[index];
   const channelHumanName = CHANNEL.NAME[channels[index]];
 
-  const messageIds = (await userBot.getMessages(channelName, { limit: 50 }))
+  const messageIds = (await mainUserBot.getMessages(channelName, { limit: 30 }))
     .filter((message) => message.id && message.replies?.replies && message.replies.comments)
     .map((message) => message.id)
     .reverse();
@@ -136,7 +147,7 @@ export const parseChannelCommentUsers = async () => {
   try {
     allParsedUserIds.clear();
 
-    const ids = (await getAllParsedUsers()).map((user) => user.telegram_id);
+    const ids = ((await getAllParsedUsers()) || []).map((user) => user.telegram_id);
 
     ids.forEach((id) => allParsedUserIds.add(id));
   } catch (e) {}

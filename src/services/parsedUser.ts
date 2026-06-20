@@ -10,7 +10,7 @@ import {
 import { useFetch } from '../utils';
 
 export const getAllParsedUsers = async (params?: ParsedUserGetAllPayloadParams) => {
-  const body = params?.where ? JSON.stringify(params.where) : undefined;
+  const body = params ? JSON.stringify(params) : undefined;
 
   return await useFetch<ParsedUserInfo[]>(`/api/parsed-user/all`, { method: 'post', body });
 };

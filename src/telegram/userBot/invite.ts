@@ -4,165 +4,112 @@ import { FloodWaitError } from 'telegram/errors';
 import { Api } from 'telegram';
 import bigInt from 'big-integer';
 
-import { userBot2 as userBot } from './index';
+import { userBots } from './index';
 import { environment } from '../../config/env';
 import { getAllParsedUsers, updateParsedUser } from '../../services/parsedUser';
 
-const inviteDelayTime = () => (Math.random() * 50 + 150) * 1000; // 150 - 200
-const massOffset = 20;
+const randomInt = (min: number, max: number) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
 
-export const initInviteUsers = async () => {
-  let inviteCount = 0;
-  let inviteCountRange = 0;
+export const massInitInviteUsers = async () => {
+  await Promise.all(userBots.map((_, index) => botWorker(index).catch((e) => console.error(`Invite process of ${index} bot failed:`, e))));
+};
 
-  const inviteHandler = async (users: ParsedUserInfo[], index: number = 0): Promise<void> => {
-    const currentUser = users[index];
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const inviteHandler = async (userBotIndex: number, users: ParsedUserInfo[]): Promise<{ seconds: number } | void> => {
+  for (let userIndex = 0; userIndex < users.length; userIndex++) {
+    await sleep(randomInt(5, 10) * 1000);
+
+    const currentUser = users[userIndex];
 
     try {
       const inputUser = new Api.InputUser({ userId: bigInt(currentUser.telegram_id), accessHash: bigInt(currentUser.accessHash) });
 
-      await userBot.invoke(new Api.channels.InviteToChannel({ channel: environment.PUBLIC_ID, users: [inputUser] }));
+      await userBots[userBotIndex].value.invoke(new Api.channels.InviteToChannel({ channel: environment.PUBLIC_ID, users: [inputUser] }));
 
       await updateParsedUser({ telegram_id: currentUser.telegram_id }, { invite_status: 'invited' });
 
-      inviteCount++;
-      inviteCountRange++;
-
-      console.log(`\n[${inviteCount}/${index + 1}/${users.length}] ${currentUser.username ?? currentUser.telegram_id} invited`);
-
-      if (users[index + 1]) {
-        if (inviteCountRange >= 10) {
-          const currentШnviteDelayTime = inviteDelayTime();
-
-          inviteCountRange = 0;
-
-          console.log(`\nDelay in ${currentШnviteDelayTime / 1000} seconds`);
-
-          await new Promise((res) =>
-            setTimeout(() => {
-              console.log('Resume inviting\n');
-
-              return res(true);
-            }, currentШnviteDelayTime)
-          );
-        }
-
-        return await inviteHandler(users, index + 1);
-      }
-
-      return console.log('Invites Complete');
+      console.log(`[${userIndex + 1}/${users.length}] ${currentUser.username ?? currentUser.telegram_id} invited`);
     } catch (e: any) {
       const errorMessage = e?.message ?? String(e);
 
-      console.log(`Failed:`, errorMessage);
+      console.log('Failed:', errorMessage);
 
-      // Telegram попросил подождать
-      if (e instanceof FloodWaitError) {
+      if (e instanceof FloodWaitError || errorMessage.includes('PEER_FLOOD')) {
         const seconds = e.seconds ?? 60;
 
-        console.log(`FloodWait ${seconds}s. Sleeping and retrying same user...`);
+        console.log(`FloodWait ${seconds}s. Stop current batch.`);
 
-        await new Promise((res) => setTimeout(res, seconds * 1000));
-
-        return await inviteHandler(users, index);
+        return { seconds };
       }
 
-      // Пользователь запретил приглашения
-      if (errorMessage.includes('USER_PRIVACY_RESTRICTED', 'USER_NOT_MUTUAL_CONTACT')) {
+      if (errorMessage.includes('USER_PRIVACY_RESTRICTED') || errorMessage.includes('USER_NOT_MUTUAL_CONTACT')) {
         await updateParsedUser({ telegram_id: currentUser.telegram_id }, { invite_status: 'privacy_restricted' });
       } else {
-        // Остальные ошибки
         await updateParsedUser({ telegram_id: currentUser.telegram_id }, { invite_status: 'failed' });
       }
-
-      if (users[index + 1]) {
-        return await inviteHandler(users, index + 1);
-      }
     }
-  };
+  }
 
-  try {
-    const pendingUsers = await getAllParsedUsers({ where: { invite_status: 'pending' } });
+  console.log('Invites Complete');
+};
+
+const botWorker = async (botIndex: number) => {
+  const userBot = userBots[botIndex];
+  const botId = userBot.id.toString();
+
+  while (true) {
+    const pendingUsers = await getAllParsedUsers({ where: { invite_status: 'pending', bot_id: botId }, limit: randomInt(10, 20) });
 
     if (!pendingUsers.length) {
-      return console.log('No pending users');
+      return console.log(`\n Bot ${botId} complete`);
     }
 
-    console.log(`Starting invite process. Users: ${pendingUsers.length}`);
+    console.log(`Bot ${botId} ---- ${botIndex}: inviting ${pendingUsers.length} users`);
 
-    await inviteHandler(pendingUsers);
-  } catch (e) {
-    console.error('Invite process failed:', e);
+    const result = await inviteHandler(botIndex, pendingUsers);
+
+    let delay = randomInt(150, 200);
+
+    if (typeof result === 'object' && 'seconds' in result) {
+      console.log(`Flood Delay in ${result.seconds} seconds`);
+
+      delay = result.seconds * 1000;
+    }
+
+    console.log(`Bot ${botId}: sleeping ${Math.round(delay / 1000)}s`);
+
+    await sleep(delay);
   }
 };
 
-export const massInitInviteUsers = async () => {
-  const massInviteHandler = async (users: ParsedUserInfo[]): Promise<void> => {
-    const offsetUsers = users.slice(0, massOffset);
+// const massInviteHandler = async (userBotIndex: number, users: ParsedUserInfo[]): Promise<{ seconds: number } | void> => {
+//   const inputUsers = users.map((user) => new Api.InputUser({ userId: bigInt(user.telegram_id), accessHash: bigInt(user.accessHash) }));
 
-    const inputUsers = offsetUsers.map((user) => new Api.InputUser({ userId: bigInt(user.telegram_id), accessHash: bigInt(user.accessHash) }));
+//   try {
+//     await userBots[userBotIndex].value.invoke(new Api.channels.InviteToChannel({ channel: environment.PUBLIC_ID, users: inputUsers }));
 
-    try {
-      await userBot.invoke(new Api.channels.InviteToChannel({ channel: environment.PUBLIC_ID, users: inputUsers }));
+//     for (const user of inputUsers) {
+//       console.log(`User ${user.userId} invited from ${userBots[userBotIndex].id} bot`);
 
-      for (const user of inputUsers) {
-        await updateParsedUser({ telegram_id: user.userId.toString() }, { invite_status: 'invited' });
-      }
+//       await updateParsedUser({ telegram_id: user.userId.toString() }, { invite_status: 'invited' });
+//     }
 
-      const nextUsers = offsetUsers.slice(massOffset);
+//     return console.log(`Invite ${users.length} user from ${userBots[userBotIndex].id} bot Complete`);
+//   } catch (e: any) {
+//     const errorMessage = e?.message ?? String(e);
 
-      if (nextUsers.length) {
-        const currentШnviteDelayTime = inviteDelayTime();
+//     console.log(`Failed:`, errorMessage);
 
-        console.log(`\nDelay in ${currentШnviteDelayTime / 1000} seconds`);
+//     // Telegram попросил подождать
+//     if (e instanceof FloodWaitError) {
+//       const seconds = e.seconds ?? 60;
 
-        await new Promise((res) =>
-          setTimeout(() => {
-            console.log('Resume inviting\n');
+//       console.log(`FloodWait from ${userBots[userBotIndex].id} bot ${seconds}s. Sleeping and retrying same user...`);
 
-            return res(true);
-          }, currentШnviteDelayTime)
-        );
-
-        return await massInviteHandler(nextUsers);
-      }
-
-      return console.log('Invites Complete');
-    } catch (e: any) {
-      const errorMessage = e?.message ?? String(e);
-
-      console.log(`Failed:`, errorMessage);
-
-      // Telegram попросил подождать
-      if (e instanceof FloodWaitError) {
-        const seconds = e.seconds ?? 60;
-
-        console.log(`FloodWait ${seconds}s. Sleeping and retrying same user...`);
-
-        await new Promise((res) => setTimeout(res, seconds * 1000));
-
-        return await massInviteHandler(users);
-      }
-
-      const nextUsers = users.slice(0, massOffset);
-
-      if (nextUsers.length) {
-        return await massInviteHandler(nextUsers);
-      }
-    }
-  };
-
-  try {
-    const pendingUsers = await getAllParsedUsers({ where: { invite_status: 'pending' } });
-
-    if (!pendingUsers.length) {
-      return console.log('No pending users');
-    }
-
-    console.log(`Starting invite process. Users: ${pendingUsers.length}`);
-
-    await massInviteHandler(pendingUsers);
-  } catch (e) {
-    console.error('Invite process failed:', e);
-  }
-};
+//       return { seconds };
+//     }
+//   }
+// };

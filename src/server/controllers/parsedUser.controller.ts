@@ -19,9 +19,9 @@ export class ParsedUserController {
     }
   }
 
-  async getAll(req: Request<ParsedUserGetAllPayloadParams['where'], undefined>, res: Response) {
+  async getAll(req: Request<ParsedUserGetAllPayloadParams, undefined>, res: Response) {
     try {
-      const users = await ParsedUser.findAll({ where: req.params });
+      const users = await ParsedUser.findAll({ where: req.body.where, limit: req.body.limit, order: [['id', 'DESC']] });
 
       if (users) {
         res.json(users);

@@ -19,6 +19,10 @@ ParsedUser.init(
       allowNull: false,
       unique: true,
     },
+    bot_id: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     langCode: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -57,7 +61,7 @@ ParsedUser.init(
     sequelize: db,
     modelName: 'ParsedUser',
     tableName: 'parsed_user',
-  }
+  },
 );
 
 export default ParsedUser;
