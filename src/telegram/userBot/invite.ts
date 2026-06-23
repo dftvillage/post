@@ -1,4 +1,4 @@
-import { ParsedUserInfo } from '../../types';
+import { ParsedUserInfo, UserBot } from '../../types';
 import { FloodWaitError } from 'telegram/errors';
 
 import { Api } from 'telegram';
@@ -7,20 +7,21 @@ import bigInt from 'big-integer';
 import { userBots } from './index';
 import { environment } from '../../config/env';
 import { getAllParsedUsers, updateParsedUser } from '../../services/parsedUser';
-
-const randomInt = (min: number, max: number) => {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-};
+import { sleep, randomInt } from '../../utils';
 
 export const massInitInviteUsers = async () => {
-  await Promise.all(userBots.map((_, index) => botWorker(index).catch((e) => console.error(`Invite process of ${index} bot failed:`, e))));
+  for (const index in userBots) {
+    try {
+      await botWorker(+index);
+    } catch (e) {
+      console.error(`Invite process of ${index} bot failed:`, e);
+    }
+  }
 };
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const inviteHandler = async (userBotIndex: number, users: ParsedUserInfo[]): Promise<{ seconds: number } | void> => {
   for (let userIndex = 0; userIndex < users.length; userIndex++) {
-    await sleep(randomInt(5, 10) * 1000);
+    await sleep(randomInt(5, 60) * 60 * 1000);
 
     const currentUser = users[userIndex];
 
@@ -30,17 +31,17 @@ const inviteHandler = async (userBotIndex: number, users: ParsedUserInfo[]): Pro
       await userBots[userBotIndex].value.invoke(new Api.channels.InviteToChannel({ channel: environment.PUBLIC_ID, users: [inputUser] }));
 
       await updateParsedUser({ telegram_id: currentUser.telegram_id }, { invite_status: 'invited' });
-
-      console.log(`[${userIndex + 1}/${users.length}] ${currentUser.username ?? currentUser.telegram_id} invited`);
     } catch (e: any) {
       const errorMessage = e?.message ?? String(e);
 
       console.log('Failed:', errorMessage);
 
-      if (e instanceof FloodWaitError || errorMessage.includes('PEER_FLOOD')) {
-        const seconds = e.seconds ?? 60;
+      if (errorMessage.includes('PEER_FLOOD')) {
+        return;
+      }
 
-        console.log(`FloodWait ${seconds}s. Stop current batch.`);
+      if (e instanceof FloodWaitError) {
+        const seconds = e.seconds ?? randomInt(60, 70);
 
         return { seconds };
       }
@@ -52,37 +53,47 @@ const inviteHandler = async (userBotIndex: number, users: ParsedUserInfo[]): Pro
       }
     }
   }
-
-  console.log('Invites Complete');
 };
 
 const botWorker = async (botIndex: number) => {
   const userBot = userBots[botIndex];
   const botId = userBot.id.toString();
 
-  while (true) {
-    const pendingUsers = await getAllParsedUsers({ where: { invite_status: 'pending', bot_id: botId }, limit: randomInt(10, 20) });
+  const pendingUsers = await getAllParsedUsers({ where: { invite_status: 'pending', bot_id: botId }, limit: randomInt(10, 20) });
 
-    if (!pendingUsers.length) {
-      return console.log(`\n Bot ${botId} complete`);
-    }
-
-    console.log(`Bot ${botId} ---- ${botIndex}: inviting ${pendingUsers.length} users`);
-
-    const result = await inviteHandler(botIndex, pendingUsers);
-
-    let delay = randomInt(150, 200);
-
-    if (typeof result === 'object' && 'seconds' in result) {
-      console.log(`Flood Delay in ${result.seconds} seconds`);
-
-      delay = result.seconds * 1000;
-    }
-
-    console.log(`Bot ${botId}: sleeping ${Math.round(delay / 1000)}s`);
-
-    await sleep(delay);
+  if (!pendingUsers.length) {
+    return console.log(`\n Bot ${botId} hast pending users`);
   }
+
+  console.log(`Bot ${botId} ---- ${botIndex}: inviting ${pendingUsers.length} users`);
+
+  await inviteHandler(botIndex, pendingUsers);
+
+  return console.log(`\n Bot ${botId} complete`);
+
+  // while (true) {
+  //   const pendingUsers = await getAllParsedUsers({ where: { invite_status: 'pending', bot_id: botId }, limit: randomInt(10, 20) });
+
+  //   if (!pendingUsers.length) {
+  //     return console.log(`\n Bot ${botId} complete`);
+  //   }
+
+  //   console.log(`Bot ${botId} ---- ${botIndex}: inviting ${pendingUsers.length} users`);
+
+  //   const result = await inviteHandler(botIndex, pendingUsers);
+
+  //   let delay = randomInt(150, 200) * 1000;
+
+  //   if (typeof result === 'object' && 'seconds' in result) {
+  //     console.log(`Flood Delay in ${result.seconds} seconds`);
+
+  //     delay = result.seconds * 1000;
+  //   }
+
+  //   console.log(`Bot ${botId}: sleeping ${Math.round(delay / 1000)}s`);
+
+  //   await sleep(delay);
+  // }
 };
 
 // const massInviteHandler = async (userBotIndex: number, users: ParsedUserInfo[]): Promise<{ seconds: number } | void> => {

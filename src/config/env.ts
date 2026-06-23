@@ -26,4 +26,14 @@ export const environment = {
   USERBOT_3_API_ID: +(process.env.USERBOT_3_API_ID as string),
   USERBOT_3_API_HASH: process.env.USERBOT_3_API_HASH as string,
   USERBOT_3_API_SESSION: process.env.USERBOT_3_API_SESSION as string,
+
+  USERBOT_4_ID: +(process.env.USERBOT_4_ID as string),
+  USERBOT_4_API_ID: +(process.env.USERBOT_4_API_ID as string),
+  USERBOT_4_API_HASH: process.env.USERBOT_4_API_HASH as string,
+  USERBOT_4_API_SESSION: process.env.USERBOT_4_API_SESSION as string,
+
+  USERBOT_5_ID: +(process.env.USERBOT_5_ID as string),
+  USERBOT_5_API_ID: +(process.env.USERBOT_5_API_ID as string),
+  USERBOT_5_API_HASH: process.env.USERBOT_5_API_HASH as string,
+  USERBOT_5_API_SESSION: process.env.USERBOT_5_API_SESSION as string,
 };

@@ -54,6 +54,7 @@ const fetchChannelUsersPost = async (messageIds: number[], channelName: string |
           current.bot ||
           current.support ||
           current.deleted ||
+          current.fake ||
           allParsedUserIds.has(current.id.toString())
         ) {
           return total;
