@@ -12,7 +12,7 @@ import { sleep, randomInt } from '../../utils';
 export const massInitInviteUsers = async () => {
   for (const index in userBots) {
     try {
-      await botWorker(+index);
+      botWorker(+index);
     } catch (e) {
       console.error(`Invite process of ${index} bot failed:`, e);
     }
@@ -21,8 +21,6 @@ export const massInitInviteUsers = async () => {
 
 const inviteHandler = async (userBotIndex: number, users: ParsedUserInfo[]): Promise<{ seconds: number } | void> => {
   for (let userIndex = 0; userIndex < users.length; userIndex++) {
-    await sleep(randomInt(5, 60) * 60 * 1000);
-
     const currentUser = users[userIndex];
 
     try {
@@ -31,6 +29,8 @@ const inviteHandler = async (userBotIndex: number, users: ParsedUserInfo[]): Pro
       await userBots[userBotIndex].value.invoke(new Api.channels.InviteToChannel({ channel: environment.PUBLIC_ID, users: [inputUser] }));
 
       await updateParsedUser({ telegram_id: currentUser.telegram_id }, { invite_status: 'invited' });
+
+      await sleep(randomInt(5, 60) * 60 * 1000);
     } catch (e: any) {
       const errorMessage = e?.message ?? String(e);
 

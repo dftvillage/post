@@ -71,17 +71,17 @@ export const initUserBot = async () => {
 
     console.log(userBot.value.session.save());
 
-    const channelUserNames = new Set([...Object.values(CHANNEL.SLUG), ...Object.values(CHANNEL.SLUG_FOR_USERS)]);
+    // const channelUserNames = new Set(['dftvillage', , ...Object.values(CHANNEL.SLUG), ...Object.values(CHANNEL.SLUG_FOR_USERS)]);
 
-    for (const channelName of channelUserNames) {
-      try {
-        await userBot.value.invoke(new Api.channels.JoinChannel({ channel: channelName }));
+    // for (const channelName of channelUserNames) {
+    //   try {
+    //     await userBot.value.invoke(new Api.channels.JoinChannel({ channel: channelName }));
 
-        console.log(`Joined ${channelName}`);
+    //     console.log(`Joined ${channelName}`);
 
-        await sleep(randomInt(2, 4));
-      } catch (e) {}
-    }
+    //     await sleep(randomInt(2, 4));
+    //   } catch (e) {}
+    // }
   }
 
   mainUserBot = userBots[0].value;

@@ -39,7 +39,7 @@ const fetchChannelUsersPost = async (messageIds: number[], channelName: string |
       offsetId: 0,
       offsetDate: 0,
       addOffset: 0,
-      limit: 400,
+      limit: 10,
       maxId: 0,
       minId: 0,
     })
